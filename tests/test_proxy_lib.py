@@ -195,23 +195,37 @@ async def test_proxy_view_aiohttp_read_error(
         assert "Reverse proxy error" in caplog.text
 
 
-async def test_headers(
+async def test_proxy_view_unauthorized(
     hass: HomeAssistant,
     local_server: Any,
     hass_client_no_auth: Any,
 ) -> None:
-    """Test proxy headers are added and respected."""
+    """Test unauthorized requests are rejected."""
     await register_test_view(hass, proxied_url=ProxiedURL(url=f"{local_server}ok"))
 
     unauthenticated_hass_client = await hass_client_no_auth()
 
-    resp = await unauthenticated_hass_client.get(
+    resp = await unauthenticated_hass_client.get(TEST_PROXY_URL)
+    assert resp.status == HTTPStatus.UNAUTHORIZED
+
+
+async def test_headers(
+    hass: HomeAssistant,
+    local_server: Any,
+    hass_client: Any,
+) -> None:
+    """Test proxy headers are added and respected."""
+    await register_test_view(hass, proxied_url=ProxiedURL(url=f"{local_server}ok"))
+
+    authenticated_hass_client = await hass_client()
+
+    resp = await authenticated_hass_client.get(
         TEST_PROXY_URL,
         headers={hdrs.CONTENT_ENCODING: "foo"},
     )
     assert resp.status == HTTPStatus.OK
 
-    resp = await unauthenticated_hass_client.get(
+    resp = await authenticated_hass_client.get(
         TEST_PROXY_URL,
         headers={hdrs.X_FORWARDED_FOR: "1.2.3.4"},
     )
