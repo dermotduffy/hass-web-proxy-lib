@@ -60,8 +60,7 @@ class ProxiedURL:
 class ProxyView(HomeAssistantView):  # type: ignore[misc]
     """HomeAssistant view."""
 
-    # TODO(dermotduffy): Change to true.
-    requires_auth = False
+    requires_auth = True
 
     def __init__(
         self,
