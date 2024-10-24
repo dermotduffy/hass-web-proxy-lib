@@ -28,12 +28,12 @@ jobs:
       - name: "Set up dependencies"
         run: poetry install --no-interaction
       - name: "Lint"
-        run: ruff check .
+        run: poetry run ruff check .
       - name: "Format"
-        run: ruff format . --check
+        run: poetry run ruff format . --check
       - name: Tests suite
         run: |
-          pytest -p no:sugar
+          poetry run pytest -p no:sugar
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4.6.0
         with:
