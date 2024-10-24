@@ -15,3 +15,31 @@ exclude_also = [
     "raise NotImplementedError",
     "if TYPE_CHECKING:"
 ]
+
+[tool.poetry]
+name = "hass-web-proxy-lib"
+version = "0.0.1"
+description = "A library to proxy web traffic through Home Assistant integrations."
+license = "MIT"
+authors = [
+    "Dermot Duffy <dermot.duffy@gmail.com>",
+]
+readme = "README.md"
+repository = "https://github.com/dermotduffy/hass-web-proxy-lib"
+classifiers = [
+    "Topic :: Home Automation"
+]
+include = [
+    # Explicitly include tests to allow downstream users to test their views.
+    { path = "tests" },
+]
+
+[tool.poetry.dependencies]
+python = ">=3.12,<3.14"
+homeassistant = ">=2024.10.3"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.3.3"
+pytest-homeassistant-custom-component = ">=0.13.174"
+ruff = ">=0.7.0"
+poetry = ">=1.8.4"
