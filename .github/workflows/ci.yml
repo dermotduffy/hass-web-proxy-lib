@@ -24,9 +24,9 @@ jobs:
         with:
           python-version: ${{ env.DEFAULT_PYTHON }}
       - name: Set up poetry
-        uses: abatilo/actions-poetry@v2
+        uses: snok/install-poetry@v1.4.1
       - name: "Set up dependencies"
-        run: poetry install 
+        run: poetry install --no-interaction
       - name: "Lint"
         run: ruff check .
       - name: "Format"
