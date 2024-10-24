@@ -15,7 +15,7 @@ env:
 jobs:
   tests:
     runs-on: "ubuntu-latest"
-    name: Run tests
+    name: Run CI
     steps:
       - name: Check out code from GitHub
         uses: "actions/checkout@v4.2.1"
@@ -28,9 +28,9 @@ jobs:
       - name: "Set up dependencies"
         run: poetry install 
       - name: "Lint"
-        run: python3 -m ruff check .
+        run: ruff check .
       - name: "Format"
-        run: python3 -m ruff format . --check
+        run: ruff format . --check
       - name: Tests suite
         run: |
           pytest -p no:sugar
