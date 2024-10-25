@@ -22,7 +22,7 @@ exclude_also = [
 
 [tool.poetry]
 name = "hass-web-proxy-lib"
-version = "0.0.2"
+version = "0.0.3"
 description = "A library to proxy web traffic through Home Assistant integrations."
 license = "MIT"
 authors = [
