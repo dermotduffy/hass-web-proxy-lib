@@ -20,7 +20,8 @@ from hass_web_proxy_lib import (
     ProxiedURL,
     WebsocketProxyView,
 )
-from tests.utils import (
+
+from .utils import (
     TEST_PROXY_URL,
     ClientErrorStreamResponse,
     ConnectionResetStreamResponse,

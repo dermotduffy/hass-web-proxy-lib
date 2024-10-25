@@ -22,7 +22,7 @@ ignore = [
 ]
 
 [lint.extend-per-file-ignores]
-    "tests/**/*.py" = [
+    "hass_web_proxy_lib/tests/**/*.py" = [
         "S101", # Allow asserts allowed in tests.
         "ARG",  # All unused arguments for fixtures.
     ]
