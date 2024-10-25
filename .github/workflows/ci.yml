@@ -15,7 +15,31 @@ env:
 jobs:
   tests:
     runs-on: "ubuntu-latest"
-    name: Run CI
+    name: Tests
+    steps:
+      - name: Check out code from GitHub
+        uses: "actions/checkout@v4.2.1"
+      - name: Setup Python ${{ env.DEFAULT_PYTHON }}
+        uses: "actions/setup-python@v5.2.0"
+        with:
+          python-version: ${{ env.DEFAULT_PYTHON }}
+      - name: Set up poetry
+        uses: snok/install-poetry@v1.4.1
+      - name: "Set up dependencies"
+        run: poetry install --no-interaction
+      - name: Tests suite
+        run: |
+          poetry run pytest -p no:sugar
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4.6.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          env_vars: OS,PYTHON
+          verbose: true
+
+  lint:
+    runs-on: "ubuntu-latest"
+    name: Lint
     steps:
       - name: Check out code from GitHub
         uses: "actions/checkout@v4.2.1"
@@ -31,12 +55,3 @@ jobs:
         run: poetry run ruff check .
       - name: "Format"
         run: poetry run ruff format . --check
-      - name: Tests suite
-        run: |
-          poetry run pytest -p no:sugar
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4.6.0
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          env_vars: OS,PYTHON
-          verbose: true
