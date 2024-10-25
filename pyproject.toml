@@ -2,13 +2,17 @@
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = [
-    "tests",
+    "hass_web_proxy_lib/tests",
 ]
 norecursedirs = [
     ".git",
-    "testing_config",
 ]
 addopts = "--timeout=10 --cov-report=xml:coverage.xml --cov-report=term-missing --cov=hass_web_proxy_lib --cov-fail-under=100"
+
+[tool.coverage.run]
+omit = [
+    "hass_web_proxy_lib/tests/*"
+]
 
 [tool.coverage.report]
 exclude_also = [
@@ -28,10 +32,6 @@ readme = "README.md"
 repository = "https://github.com/dermotduffy/hass-web-proxy-lib"
 classifiers = [
     "Topic :: Home Automation"
-]
-include = [
-    # Explicitly include tests to allow downstream users to test their views.
-    { path = "tests" },
 ]
 
 [tool.poetry.dependencies]
