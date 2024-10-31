@@ -10,16 +10,16 @@ from logging import Logger, getLogger
 from typing import TYPE_CHECKING, Any
 
 import aiohttp
+import aiohttp.typedefs
 from aiohttp import hdrs, web
 from aiohttp.web_exceptions import HTTPBadGateway
-from homeassistant.components.http import HomeAssistantView
+from homeassistant.components.http import KEY_AUTHENTICATED, HomeAssistantView
 from homeassistant.util.ssl import get_default_context
 
 LOGGER: Logger = getLogger(__package__)
 
 if TYPE_CHECKING:
     import ssl
-    from collections.abc import Mapping
 
     from multidict import CIMultiDict
 
@@ -29,20 +29,32 @@ class HASSWebProxyLibError(Exception):
 
 
 class HASSWebProxyLibBadRequestError(HASSWebProxyLibError):
-    """Exception to indicate a bad request."""
+    """Exception to indicate a bad (400) request."""
+
+
+class HASSWebProxyLibUnauthorizedRequestError(HASSWebProxyLibError):
+    """Exception to indicate an unauthorized (401) request."""
 
 
 class HASSWebProxyLibForbiddenRequestError(HASSWebProxyLibError):
-    """Exception to indicate a bad request."""
+    """Exception to indicate an forbidden (403) request."""
 
 
 class HASSWebProxyLibNotFoundRequestError(HASSWebProxyLibError):
-    """Exception to indicate something being not found."""
+    """Exception to indicate something is not found (404)."""
 
 
 class HASSWebProxyLibExpiredError(HASSWebProxyLibError):
-    """Exception to indicate a URL match that has expired."""
+    """Exception to indicate an expired (410) request."""
 
+
+EXPECTION_TO_HTTP_STATUS: dict[HASSWebProxyLibError, HTTPStatus] = {
+    HASSWebProxyLibBadRequestError: HTTPStatus.BAD_REQUEST,
+    HASSWebProxyLibForbiddenRequestError: HTTPStatus.FORBIDDEN,
+    HASSWebProxyLibNotFoundRequestError: HTTPStatus.NOT_FOUND,
+    HASSWebProxyLibExpiredError: HTTPStatus.GONE,
+    HASSWebProxyLibUnauthorizedRequestError: HTTPStatus.UNAUTHORIZED,
+}
 
 # These proxies are inspired by:
 #  - https://github.com/home-assistant/supervisor/blob/main/supervisor/api/ingress.py
@@ -56,11 +68,21 @@ class ProxiedURL:
     url: str
     ssl_context: ssl.SSLContext | None = None
 
+    # Convenience parameter to set additional parameters in the proxied URL. Can
+    # also just set the parameters directly in url (above).
+    query_params: aiohttp.typedefs.Query = None
+
+    # Unauthenticated requests must be explicitly marked.
+    allow_unauthenticated: bool = False
+
 
 class ProxyView(HomeAssistantView):  # type: ignore[misc]
     """HomeAssistant view."""
 
-    requires_auth = True
+    # In _get_proxied_url_or_handle_error(...) all requests will be rejected if
+    # they are unauthorized, unless the library caller explicitly sets
+    # `allow_unauthenticated` to true.
+    requires_auth = False
 
     def __init__(
         self,
@@ -81,11 +103,6 @@ class ProxyView(HomeAssistantView):  # type: ignore[misc]
             LOGGER.debug("Reverse proxy error for %s: %s", request.rel_url, err)
         raise HTTPBadGateway
 
-    @staticmethod
-    def _get_query_params(request: web.Request) -> Mapping[str, str]:
-        """Get the query params to send upstream."""
-        return {k: v for k, v in request.query.items() if k != "authSig"}
-
     def _get_proxied_url_or_handle_error(
         self,
         request: web.Request,
@@ -94,17 +111,17 @@ class ProxyView(HomeAssistantView):  # type: ignore[misc]
         """Get the proxied URL or handle error."""
         try:
             url = self._get_proxied_url(request, **kwargs)
-        except HASSWebProxyLibForbiddenRequestError:
-            return web.Response(status=HTTPStatus.FORBIDDEN)
-        except HASSWebProxyLibNotFoundRequestError:
-            return web.Response(status=HTTPStatus.NOT_FOUND)
-        except HASSWebProxyLibBadRequestError:
-            return web.Response(status=HTTPStatus.BAD_REQUEST)
-        except HASSWebProxyLibExpiredError:
-            return web.Response(status=HTTPStatus.GONE)
+        except HASSWebProxyLibError as err:
+            return web.Response(
+                status=EXPECTION_TO_HTTP_STATUS.get(type(err), HTTPStatus.BAD_REQUEST)
+            )
 
         if not url or not url.url:
             return web.Response(status=HTTPStatus.NOT_FOUND)
+
+        if not request[KEY_AUTHENTICATED] and not url.allow_unauthenticated:
+            return web.Response(status=HTTPStatus.UNAUTHORIZED)
+
         return url
 
     def _get_proxied_url(self, _request: web.Request, **_kwargs: Any) -> ProxiedURL:
@@ -117,8 +134,6 @@ class ProxyView(HomeAssistantView):  # type: ignore[misc]
         **kwargs: Any,
     ) -> web.Response | web.StreamResponse:
         """Handle route for request."""
-        LOGGER.debug("PROXY REQUEST: %s", request)
-
         url_or_response = self._get_proxied_url_or_handle_error(request, **kwargs)
         if isinstance(url_or_response, web.Response):
             return url_or_response
@@ -130,7 +145,7 @@ class ProxyView(HomeAssistantView):  # type: ignore[misc]
             request.method,
             url_or_response.url,
             headers=source_header,
-            params=self._get_query_params(request),
+            params=url_or_response.query_params,
             allow_redirects=False,
             data=data,
             ssl=url_or_response.ssl_context or get_default_context(),
@@ -200,16 +215,10 @@ class WebsocketProxyView(ProxyView):
 
         source_header = _init_header(request)
 
-        # TODO: Why is this only here?
-        url = (
-            url_or_response.url
-            if not request.query_string
-            else f"{url_or_response.url}?{request.query_string}"
-        )
-
         async with self._websession.ws_connect(
-            url,
+            url_or_response.url,
             headers=source_header,
+            params=url_or_response.query_params,
             protocols=req_protocols,
             autoclose=False,
             autoping=False,
