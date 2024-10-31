@@ -107,12 +107,12 @@ file](https://github.com/dermotduffy/hass-web-proxy-lib/blob/main/hass_web_proxy
 that can be used to test proxying.
 
 The `local_server` fixture will start a small `aiohttp` server that can be
-"proxied to". The server listens to `/ok` and `/ws` for simple `GET` requests
+"proxied to". The server listens to `/` and `/ws` for simple `GET` requests
 and websockets respectively.
 
-### `/ok`
+### `/`
 
-The `/ok` handler will return a `json` object containing:
+The `/` handler will return a `json` object containing:
 
 | Field name | Description                                   |
 | ---------- | --------------------------------------------- |
@@ -122,7 +122,7 @@ The `/ok` handler will return a `json` object containing:
 ### `/ws`
 
 The `/ws` handler will initially return a `json` object containing `headers` and
-`url` (as in `/ok` above), and then will simply echo back text or binary data.
+`url` (as in `/` above), and then will simply echo back text or binary data.
 
 ### Example Test Usage
 
@@ -135,15 +135,15 @@ pytest_plugins = [
     "hass_web_proxy_lib.tests.utils",
 ]
 
-async def test_proxy_view_ok(
+async def test_proxy_view_success(
     hass: HomeAssistant,
     local_server: Any,
     hass_client: Any,
 ) -> None:
-    """Test that a valid URL causes OK."""
+    """Test that a valid URL proxies successfully."""
     authenticated_hass_client = await hass_client()
     resp = await authenticated_hass_client.get(
-        f"/api/my_integration/proxy/?url={urllib.parse.quote_plus(f"{local_server}ok")}"
+        f"/api/my_integration/proxy/?url={urllib.parse.quote_plus(local_server)}"
     )
     assert resp.status == HTTPStatus.OK
 ```

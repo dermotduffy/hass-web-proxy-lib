@@ -131,7 +131,7 @@ async def local_server(
             **kwargs,
         }
 
-    async def handler_ok(request: web.Request) -> web.Response:
+    async def handler(request: web.Request) -> web.Response:
         """Return simple request data."""
         # Echo the request details back as the data.
         return web.json_response(
@@ -139,7 +139,7 @@ async def local_server(
             data=_get_response_data(request),
         )
 
-    async def handler_ws_ok(request: web.Request) -> web.WebSocketResponse:
+    async def handler_ws(request: web.Request) -> web.WebSocketResponse:
         """Return simple request data."""
         ws = web.WebSocketResponse()
         await ws.prepare(request)
@@ -158,8 +158,8 @@ async def local_server(
     app = web.Application()
     app.add_routes(
         [
-            web.get("/ok", handler_ok),
-            web.get("/ws", handler_ws_ok),
+            web.get("/", handler),
+            web.get("/ws", handler_ws),
         ]
     )
 
