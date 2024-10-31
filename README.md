@@ -99,3 +99,51 @@ Found`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404)).
 Can be raised by `_get_proxied_url(...)` to indicate an expired / permanently removed
 resource is not available ([`410
 Gone`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/410)).
+
+## Testing
+
+This library also contains a small [test utility and fixture
+file](https://github.com/dermotduffy/hass-web-proxy-lib/blob/main/hass_web_proxy_lib/tests/utils.py)
+that can be used to test proxying.
+
+The `local_server` fixture will start a small `aiohttp` server that can be
+"proxied to". The server listens to `/ok` and `/ws` for simple `GET` requests
+and websockets respectively.
+
+### `/ok`
+
+The `/ok` handler will return a `json` object containing:
+
+| Field name | Description                                   |
+| ---------- | --------------------------------------------- |
+| `headers`  | A dictionary of the request headers received. |
+| `url`      | The full URL/querystring requested.           |
+
+### `/ws`
+
+The `/ws` handler will initially return a `json` object containing `headers` and
+`url` (as in `/ok` above), and then will simply echo back text or binary data.
+
+### Example Test Usage
+
+```py
+import pytest
+
+# Add the HA and local_server fixtures.
+pytest_plugins = [
+    "pytest_homeassistant_custom_component",
+    "hass_web_proxy_lib.tests.utils",
+]
+
+async def test_proxy_view_ok(
+    hass: HomeAssistant,
+    local_server: Any,
+    hass_client: Any,
+) -> None:
+    """Test that a valid URL causes OK."""
+    authenticated_hass_client = await hass_client()
+    resp = await authenticated_hass_client.get(
+        f"/api/my_integration/proxy/?url={urllib.parse.quote_plus(f"{local_server}ok")}"
+    )
+    assert resp.status == HTTPStatus.OK
+```
