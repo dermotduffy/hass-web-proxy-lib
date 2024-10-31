@@ -63,11 +63,11 @@ async def test_proxy_view_http_ok_header_verify(
     resp = await authenticated_hass_client.get(TEST_PROXY_URL, headers=source_headers)
     assert resp.status == HTTPStatus.OK
 
-    request_headers = await resp.json()
-    assert request_headers["my-header"] == "my-value"
-    assert request_headers[hdrs.X_FORWARDED_FOR] == "192.168.0.1, 127.0.0.1"
-    assert request_headers[hdrs.X_FORWARDED_HOST] == "example.com"
-    assert request_headers[hdrs.X_FORWARDED_PROTO] == "http"
+    headers = (await resp.json())["headers"]
+    assert headers["my-header"] == "my-value"
+    assert headers[hdrs.X_FORWARDED_FOR] == "192.168.0.1, 127.0.0.1"
+    assert headers[hdrs.X_FORWARDED_HOST] == "example.com"
+    assert headers[hdrs.X_FORWARDED_PROTO] == "http"
 
 
 @pytest.mark.usefixtures("local_server")
@@ -210,6 +210,40 @@ async def test_proxy_view_unauthorized(
     assert resp.status == HTTPStatus.UNAUTHORIZED
 
 
+async def test_proxy_view_unauthorized_allowed(
+    hass: HomeAssistant,
+    local_server: Any,
+    hass_client_no_auth: Any,
+) -> None:
+    """Test unauthorized requests are rejected."""
+    await register_test_view(
+        hass,
+        proxied_url=ProxiedURL(url=f"{local_server}ok", allow_unauthenticated=True),
+    )
+
+    unauthenticated_hass_client = await hass_client_no_auth()
+
+    resp = await unauthenticated_hass_client.get(TEST_PROXY_URL)
+    assert resp.status == HTTPStatus.OK
+
+
+async def test_proxy_view_unauthorized_not_allowed(
+    hass: HomeAssistant,
+    local_server: Any,
+    hass_client_no_auth: Any,
+) -> None:
+    """Test unauthorized requests are rejected."""
+    await register_test_view(
+        hass,
+        proxied_url=ProxiedURL(url=f"{local_server}ok", allow_unauthenticated=False),
+    )
+
+    unauthenticated_hass_client = await hass_client_no_auth()
+
+    resp = await unauthenticated_hass_client.get(TEST_PROXY_URL)
+    assert resp.status == HTTPStatus.UNAUTHORIZED
+
+
 async def test_headers(
     hass: HomeAssistant,
     local_server: Any,
@@ -247,6 +281,9 @@ async def test_proxy_view_websocket_ok(
 
     async with authenticated_hass_client.ws_connect(TEST_PROXY_URL) as ws:
         await ws.ping()
+
+        request = await ws.receive_json()
+        assert request["url"] == f"{local_server}ws"
 
         # Test sending text data.
         result = await asyncio.gather(
@@ -314,7 +351,7 @@ async def test_proxy_view_websocket_non_ok(
     assert resp.status == HTTPStatus.NOT_FOUND
 
 
-async def test_ws_proxy_specify_protocol(
+async def test_proxy_view_websocket_specify_protocol(
     hass: Any,
     local_server: Any,
     hass_client: Any,
@@ -331,3 +368,45 @@ async def test_ws_proxy_specify_protocol(
     ) as ws:
         assert ws
         await ws.close()
+
+
+async def test_proxy_view_http_query_parameters_set(
+    hass: HomeAssistant,
+    local_server: Any,
+    hass_client: Any,
+) -> None:
+    """Test that a valid URL causes OK."""
+    await register_test_view(
+        hass,
+        proxied_url=ProxiedURL(
+            url=f"{local_server}ok?a=1&b=2", query_params={"a": "2", "c": "3"}
+        ),
+    )
+
+    authenticated_hass_client = await hass_client()
+    resp = await authenticated_hass_client.get(TEST_PROXY_URL)
+    assert resp.status == HTTPStatus.OK
+
+    json = await resp.json()
+    assert json["url"] == f"{local_server}ok?a=1&b=2&a=2&c=3"
+
+
+async def test_proxy_view_websocket_query_parameters_set(
+    hass: HomeAssistant,
+    local_server: Any,
+    hass_client: Any,
+) -> None:
+    """Test that a valid URL causes OK."""
+    await register_test_view(
+        hass,
+        proxied_url=ProxiedURL(
+            url=f"{local_server}ws?a=1&b=2", query_params={"a": "2", "c": "3"}
+        ),
+        kind=WebsocketProxyView,
+    )
+
+    authenticated_hass_client = await hass_client()
+
+    async with authenticated_hass_client.ws_connect(TEST_PROXY_URL) as ws:
+        request = await ws.receive_json()
+        assert request["url"] == f"{local_server}ws?a=1&b=2&a=2&c=3"

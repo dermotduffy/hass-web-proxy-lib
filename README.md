@@ -1,8 +1,7 @@
 # `hass-web-proxy-lib`
 
-A small [Home Assistant](https://www.home-assistant.io/) library to proxy
-authenticated web traffic through Home Assistant. Used by the [Home Assistant
-Web Proxy
+A small [Home Assistant](https://www.home-assistant.io/) library to proxy web
+traffic through Home Assistant. Used by the [Home Assistant Web Proxy
 Integration](https://github.com/dermotduffy/hass-web-proxy-integration/) and any
 other integration that needs to proxy traffic through Home Assistant.
 
@@ -53,12 +52,23 @@ for a more complete example of usage of this library.
 ### `ProxyView`
 
 The main class to inherit from for simple `GET` request proxying. Inheritors
-must implement `_get_proxied_url(...)`.
+must implement `_get_proxied_url(...)` to return a `ProxiedURL` object.
 
 ### `WebsocketProxyView`
 
 The class to inherit from for websocket proxying. Inheritors must implement
-`_get_proxied_url(...)`.
+`_get_proxied_url(...)` to return a `ProxiedURL` object.
+
+### ProxiedURL
+
+A small dataclass returned by overridden `_get_proxied_url(...)` methods that describes how the library should proxy a given request.
+
+| Field name              | Default | Description                                                                                                                                                                                                                |
+| ----------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`                   |         | The destination URL a given request should be made to, e.g. `https://my-backend.my-domain.io`.                                                                                                                             |
+| `ssl_context`           |         | An optional [`SSLContext`](https://docs.python.org/3/library/ssl.html#ssl.SSLContext) object that should be used for secure onward requests.                                                                               |
+| `query_params`          |         | An optional dictionary of query parameters to set in the target URL. This is a convenience alternative to the caller simply adding the query string parameters onto the `url` parameter.                                   |
+| `allow_unauthenticated` | `False` | When `False` or unset, unauthenticated HA traffic will be rejected with a [`401 Unauthorized`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401) status. When `True`, unauthenticated traffic will be allowed. |
 
 ### Errors
 
@@ -66,6 +76,12 @@ The class to inherit from for websocket proxying. Inheritors must implement
 
 Can be raised by `_get_proxied_url(...)` to indicate a bad request ([`400 Bad
 Request`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400)).
+
+#### `HASSWebProxyLibUnauthorizedRequestError`
+
+Can be raised by `_get_proxied_url(...)` to indicate an unauthorized request
+([`401
+Unauthorized`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401)).
 
 #### `HASSWebProxyLibForbiddenRequestError`
 
