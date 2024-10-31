@@ -33,26 +33,26 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 
-async def test_proxy_view_http_ok(
+async def test_proxy_view_http_success(
     hass: HomeAssistant,
     local_server: Any,
     hass_client: Any,
 ) -> None:
-    """Test that a valid URL causes OK."""
-    await register_test_view(hass, proxied_url=ProxiedURL(url=f"{local_server}ok"))
+    """Test that a valid URL proxies successfully."""
+    await register_test_view(hass, proxied_url=ProxiedURL(url=local_server))
 
     authenticated_hass_client = await hass_client()
     resp = await authenticated_hass_client.get(TEST_PROXY_URL)
     assert resp.status == HTTPStatus.OK
 
 
-async def test_proxy_view_http_ok_header_verify(
+async def test_proxy_view_http_success_header_verify(
     hass: HomeAssistant,
     local_server: Any,
     hass_client: Any,
 ) -> None:
-    """Test that a valid URL causes OK."""
-    await register_test_view(hass, proxied_url=ProxiedURL(url=f"{local_server}ok"))
+    """Test that a valid URL proxies successfully."""
+    await register_test_view(hass, proxied_url=ProxiedURL(url=local_server))
 
     authenticated_hass_client = await hass_client()
     source_headers = {
@@ -142,7 +142,7 @@ async def test_proxy_view_aiohttp_write_error(
     hass_client: Any,
 ) -> None:
     """Test that an aiohttp error is handled."""
-    await register_test_view(hass, proxied_url=ProxiedURL(url=f"{local_server}ok"))
+    await register_test_view(hass, proxied_url=ProxiedURL(url=local_server))
 
     authenticated_hass_client = await hass_client()
 
@@ -161,7 +161,7 @@ async def test_proxy_view_aiohttp_connection_reset_error(
     hass_client: Any,
 ) -> None:
     """Test that an aiohttp connection reset is handled."""
-    await register_test_view(hass, proxied_url=ProxiedURL(url=f"{local_server}ok"))
+    await register_test_view(hass, proxied_url=ProxiedURL(url=local_server))
 
     authenticated_hass_client = await hass_client()
 
@@ -180,7 +180,7 @@ async def test_proxy_view_aiohttp_read_error(
     hass_client: Any,
 ) -> None:
     """Test snapshot request with a read error."""
-    await register_test_view(hass, proxied_url=ProxiedURL(url=f"{local_server}ok"))
+    await register_test_view(hass, proxied_url=ProxiedURL(url=local_server))
 
     authenticated_hass_client = await hass_client()
 
@@ -202,7 +202,7 @@ async def test_proxy_view_unauthorized(
     hass_client_no_auth: Any,
 ) -> None:
     """Test unauthorized requests are rejected."""
-    await register_test_view(hass, proxied_url=ProxiedURL(url=f"{local_server}ok"))
+    await register_test_view(hass, proxied_url=ProxiedURL(url=local_server))
 
     unauthenticated_hass_client = await hass_client_no_auth()
 
@@ -218,7 +218,7 @@ async def test_proxy_view_unauthorized_allowed(
     """Test unauthorized requests are rejected."""
     await register_test_view(
         hass,
-        proxied_url=ProxiedURL(url=f"{local_server}ok", allow_unauthenticated=True),
+        proxied_url=ProxiedURL(url=local_server, allow_unauthenticated=True),
     )
 
     unauthenticated_hass_client = await hass_client_no_auth()
@@ -235,7 +235,7 @@ async def test_proxy_view_unauthorized_not_allowed(
     """Test unauthorized requests are rejected."""
     await register_test_view(
         hass,
-        proxied_url=ProxiedURL(url=f"{local_server}ok", allow_unauthenticated=False),
+        proxied_url=ProxiedURL(url=local_server, allow_unauthenticated=False),
     )
 
     unauthenticated_hass_client = await hass_client_no_auth()
@@ -250,7 +250,7 @@ async def test_headers(
     hass_client: Any,
 ) -> None:
     """Test proxy headers are added and respected."""
-    await register_test_view(hass, proxied_url=ProxiedURL(url=f"{local_server}ok"))
+    await register_test_view(hass, proxied_url=ProxiedURL(url=local_server))
 
     authenticated_hass_client = await hass_client()
 
@@ -267,7 +267,7 @@ async def test_headers(
     assert resp.status == HTTPStatus.OK
 
 
-async def test_proxy_view_websocket_ok(
+async def test_proxy_view_websocket_success(
     hass: Any,
     local_server: Any,
     hass_client: Any,
@@ -337,7 +337,7 @@ async def test_proxy_view_websocket_connection_reset(
 
 
 @pytest.mark.usefixtures("local_server")
-async def test_proxy_view_websocket_non_ok(
+async def test_proxy_view_websocket_not_found(
     hass: HomeAssistant,
     hass_client: Any,
 ) -> None:
@@ -379,7 +379,7 @@ async def test_proxy_view_http_query_parameters_set(
     await register_test_view(
         hass,
         proxied_url=ProxiedURL(
-            url=f"{local_server}ok?a=1&b=2", query_params={"a": "2", "c": "3"}
+            url=f"{local_server}?a=1&b=2", query_params={"a": "2", "c": "3"}
         ),
     )
 
@@ -388,7 +388,7 @@ async def test_proxy_view_http_query_parameters_set(
     assert resp.status == HTTPStatus.OK
 
     json = await resp.json()
-    assert json["url"] == f"{local_server}ok?a=1&b=2&a=2&c=3"
+    assert json["url"] == f"{local_server}?a=1&b=2&a=2&c=3"
 
 
 async def test_proxy_view_websocket_query_parameters_set(
