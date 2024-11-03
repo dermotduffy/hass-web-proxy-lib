@@ -71,9 +71,10 @@ A small dataclass returned by overridden `_get_proxied_url(...)` methods that de
 | Field name              | Default | Description                                                                                                                                                                                                                |
 | ----------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `url`                   |         | The destination URL a given request should be made to, e.g. `https://my-backend.my-domain.io`.                                                                                                                             |
-| `ssl_context`           |         | An optional [`SSLContext`](https://docs.python.org/3/library/ssl.html#ssl.SSLContext) object that should be used for secure onward requests.                                                                               |
-| `query_params`          |         | An optional dictionary of query parameters to set in the target URL. This is a convenience alternative to the caller simply adding the query string parameters onto the `url` parameter.                                   |
 | `allow_unauthenticated` | `False` | When `False` or unset, unauthenticated HA traffic will be rejected with a [`401 Unauthorized`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401) status. When `True`, unauthenticated traffic will be allowed. |
+| `headers`               |         | An optional dictionary of headers to set on the outbound request.                                                                                                                                                                    |
+| `query_params`          |         | An optional dictionary of query parameters to set in the target URL. This is a convenience alternative to the caller simply adding the query string parameters onto the `url` parameter.                                   |
+| `ssl_context`           |         | An optional [`SSLContext`](https://docs.python.org/3/library/ssl.html#ssl.SSLContext) object that should be used for secure onward requests.                                                                               |
 
 ### Errors
 
