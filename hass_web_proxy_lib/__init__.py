@@ -129,7 +129,7 @@ class ProxyView(HomeAssistantView):
 
         return url
 
-    def _get_proxied_url(self, _request: web.Request, **_kwargs: Any) -> ProxiedURL:
+    def _get_proxied_url(self, request: web.Request, **kwargs: Any) -> ProxiedURL:
         """Get the relevant Proxied URL."""
         raise NotImplementedError  # pragma: no cover
 
