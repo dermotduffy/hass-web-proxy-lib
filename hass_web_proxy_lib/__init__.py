@@ -21,6 +21,7 @@ LOGGER: Logger = getLogger(__package__)
 if TYPE_CHECKING:
     import ssl
 
+    from aiohttp.typedefs import LooseHeaders
     from multidict import CIMultiDict
 
 
@@ -74,6 +75,10 @@ class ProxiedURL:
 
     # Unauthenticated requests must be explicitly marked.
     allow_unauthenticated: bool = False
+
+    # Headers to be added to the request to the proxied URL (by default most
+    # headers on the inbound request will be passed to the outbound request).
+    headers: LooseHeaders | None = None
 
 
 class ProxyView(HomeAssistantView):  # type: ignore[misc]
@@ -139,7 +144,7 @@ class ProxyView(HomeAssistantView):  # type: ignore[misc]
             return url_or_response
 
         data = await request.read()
-        source_header = _init_header(request)
+        source_header = _init_header(request, url_or_response.headers)
 
         async with self._websession.request(
             request.method,
@@ -213,7 +218,7 @@ class WebsocketProxyView(ProxyView):
         )
         await ws_to_user.prepare(request)
 
-        source_header = _init_header(request)
+        source_header = _init_header(request, url_or_response.headers)
 
         async with self._websession.ws_connect(
             url_or_response.url,
@@ -233,25 +238,26 @@ class WebsocketProxyView(ProxyView):
             )
         return ws_to_user
 
+NO_COPY_HEADERS = [
+    hdrs.CONTENT_LENGTH,
+    hdrs.CONTENT_ENCODING,
+    hdrs.SEC_WEBSOCKET_EXTENSIONS,
+    hdrs.SEC_WEBSOCKET_PROTOCOL,
+    hdrs.SEC_WEBSOCKET_VERSION,
+    hdrs.SEC_WEBSOCKET_KEY,
+    hdrs.HOST,
+    hdrs.AUTHORIZATION,
+]
 
-def _init_header(request: web.Request) -> CIMultiDict | dict[str, str]:
+def _init_header(
+    request: web.Request,
+    additional_headers: LooseHeaders | None = None,
+) -> CIMultiDict | dict[str, str]:
     """Create initial header."""
-    headers = {}
-
-    # filter flags
-    for name, value in request.headers.items():
-        if name in (
-            hdrs.CONTENT_LENGTH,
-            hdrs.CONTENT_ENCODING,
-            hdrs.SEC_WEBSOCKET_EXTENSIONS,
-            hdrs.SEC_WEBSOCKET_PROTOCOL,
-            hdrs.SEC_WEBSOCKET_VERSION,
-            hdrs.SEC_WEBSOCKET_KEY,
-            hdrs.HOST,
-            hdrs.AUTHORIZATION,
-        ):
-            continue
-        headers[name] = value
+    headers = {
+        **{ k:v for (k,v) in request.headers.items() if k not in NO_COPY_HEADERS },
+        **dict((additional_headers or {}).items()),
+    }
 
     # Set X-Forwarded-For
     forward_for = request.headers.get(hdrs.X_FORWARDED_FOR)

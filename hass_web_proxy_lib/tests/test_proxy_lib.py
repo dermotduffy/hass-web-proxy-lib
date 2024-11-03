@@ -375,7 +375,7 @@ async def test_proxy_view_http_query_parameters_set(
     local_server: Any,
     hass_client: Any,
 ) -> None:
-    """Test that a valid URL causes OK."""
+    """Test that query parameters are set on request."""
     await register_test_view(
         hass,
         proxied_url=ProxiedURL(
@@ -396,7 +396,7 @@ async def test_proxy_view_websocket_query_parameters_set(
     local_server: Any,
     hass_client: Any,
 ) -> None:
-    """Test that a valid URL causes OK."""
+    """Test that query parameters are set on a websocket request."""
     await register_test_view(
         hass,
         proxied_url=ProxiedURL(
@@ -410,3 +410,54 @@ async def test_proxy_view_websocket_query_parameters_set(
     async with authenticated_hass_client.ws_connect(TEST_PROXY_URL) as ws:
         request = await ws.receive_json()
         assert request["url"] == f"{local_server}ws?a=1&b=2&a=2&c=3"
+
+
+async def test_proxy_view_http_headers_set(
+    hass: HomeAssistant,
+    local_server: Any,
+    hass_client: Any,
+) -> None:
+    """Test that headers are set on a request."""
+    await register_test_view(
+        hass,
+        proxied_url=ProxiedURL(
+            url=str(local_server),
+            headers={"foo": "bar", "X-Forwarded-For": "ROGUE_VALUE"},
+        ),
+    )
+
+    authenticated_hass_client = await hass_client()
+    resp = await authenticated_hass_client.get(TEST_PROXY_URL)
+    assert resp.status == HTTPStatus.OK
+
+    json = await resp.json()
+    assert json["headers"]["foo"] == "bar"
+
+    # Certain headers cannot be overridden.
+    assert json["headers"]["X-Forwarded-For"] != "ROGUE_VALUE"
+
+
+async def test_proxy_view_websocket_headers_set(
+    hass: HomeAssistant,
+    local_server: Any,
+    hass_client: Any,
+) -> None:
+    """Test that headers are set on a websocket request."""
+    await register_test_view(
+        hass,
+        proxied_url=ProxiedURL(
+            url=f"{local_server}ws?a=1&b=2",
+            headers={"foo": "bar", "X-Forwarded-For": "ROGUE_VALUE"},
+        ),
+        kind=WebsocketProxyView,
+    )
+
+    authenticated_hass_client = await hass_client()
+
+    async with authenticated_hass_client.ws_connect(TEST_PROXY_URL) as ws:
+        request = await ws.receive_json()
+
+        assert request["headers"]["foo"] == "bar"
+
+        # Certain headers cannot be overridden.
+        assert request["headers"]["X-Forwarded-For"] != "ROGUE_VALUE"
