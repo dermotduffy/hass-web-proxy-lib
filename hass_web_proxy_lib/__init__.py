@@ -15,6 +15,7 @@ from aiohttp import hdrs, web
 from aiohttp.web_exceptions import HTTPBadGateway
 from homeassistant.components.http import KEY_AUTHENTICATED, HomeAssistantView
 from homeassistant.util.ssl import get_default_context
+from multidict import CIMultiDict
 
 LOGGER: Logger = getLogger(__package__)
 
@@ -22,7 +23,6 @@ if TYPE_CHECKING:
     import ssl
 
     from aiohttp.typedefs import LooseHeaders
-    from multidict import CIMultiDict
 
 
 class HASSWebProxyLibError(Exception):
@@ -49,7 +49,7 @@ class HASSWebProxyLibExpiredError(HASSWebProxyLibError):
     """Exception to indicate an expired (410) request."""
 
 
-EXPECTION_TO_HTTP_STATUS: dict[HASSWebProxyLibError, HTTPStatus] = {
+EXPECTION_TO_HTTP_STATUS: dict[type[HASSWebProxyLibError], HTTPStatus] = {
     HASSWebProxyLibBadRequestError: HTTPStatus.BAD_REQUEST,
     HASSWebProxyLibForbiddenRequestError: HTTPStatus.FORBIDDEN,
     HASSWebProxyLibNotFoundRequestError: HTTPStatus.NOT_FOUND,
@@ -81,7 +81,7 @@ class ProxiedURL:
     headers: LooseHeaders | None = None
 
 
-class ProxyView(HomeAssistantView):  # type: ignore[misc]
+class ProxyView(HomeAssistantView):
     """HomeAssistant view."""
 
     # In _get_proxied_url_or_handle_error(...) all requests will be rejected if
@@ -254,21 +254,25 @@ NO_COPY_HEADERS = [
 def _init_header(
     request: web.Request,
     additional_headers: LooseHeaders | None = None,
-) -> CIMultiDict | dict[str, str]:
+) -> CIMultiDict[str]:
     """Create initial header."""
-    headers = {
-        **{k: v for (k, v) in request.headers.items() if k not in NO_COPY_HEADERS},
-        **dict((additional_headers or {}).items()),
-    }
+    headers: CIMultiDict[str] = CIMultiDict(
+        {
+            **{k: v for (k, v) in request.headers.items() if k not in NO_COPY_HEADERS},
+            **CIMultiDict(additional_headers or {}),
+        }
+    )
 
     # Set X-Forwarded-For
     forward_for = request.headers.get(hdrs.X_FORWARDED_FOR)
-    connected_ip = ip_address(request.transport.get_extra_info("peername")[0])
-    if forward_for:
-        forward_for = f"{forward_for}, {connected_ip!s}"
-    else:
-        forward_for = f"{connected_ip!s}"
-    headers[hdrs.X_FORWARDED_FOR] = forward_for
+
+    if request.transport:
+        connected_ip = ip_address(request.transport.get_extra_info("peername")[0])
+        if forward_for:
+            forward_for = f"{forward_for}, {connected_ip!s}"
+        else:
+            forward_for = f"{connected_ip!s}"
+        headers[hdrs.X_FORWARDED_FOR] = forward_for
 
     # Set X-Forwarded-Host
     forward_host = request.headers.get(hdrs.X_FORWARDED_HOST)
