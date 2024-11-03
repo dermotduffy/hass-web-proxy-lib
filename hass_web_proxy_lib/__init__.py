@@ -238,6 +238,7 @@ class WebsocketProxyView(ProxyView):
             )
         return ws_to_user
 
+
 NO_COPY_HEADERS = [
     hdrs.CONTENT_LENGTH,
     hdrs.CONTENT_ENCODING,
@@ -249,13 +250,14 @@ NO_COPY_HEADERS = [
     hdrs.AUTHORIZATION,
 ]
 
+
 def _init_header(
     request: web.Request,
     additional_headers: LooseHeaders | None = None,
 ) -> CIMultiDict | dict[str, str]:
     """Create initial header."""
     headers = {
-        **{ k:v for (k,v) in request.headers.items() if k not in NO_COPY_HEADERS },
+        **{k: v for (k, v) in request.headers.items() if k not in NO_COPY_HEADERS},
         **dict((additional_headers or {}).items()),
     }
 
