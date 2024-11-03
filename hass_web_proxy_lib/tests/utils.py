@@ -1,7 +1,7 @@
 """Test utilities for hass_web_proxy_lib."""
 
 from collections.abc import Generator
-from typing import Any, Self
+from typing import Any, Self, cast
 from unittest.mock import patch
 
 import aiohttp
@@ -14,6 +14,7 @@ from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.plugins import (
     enable_custom_integrations,  # noqa: F401  # noqa: F401
 )
+from yarl import URL
 
 from hass_web_proxy_lib import ProxiedURL, ProxyView
 
@@ -90,14 +91,16 @@ class FakeAsyncContextManager:
 async def register_test_view(  # noqa: PLR0913
     hass: HomeAssistant,
     proxied_url: ProxiedURL | None = None,
-    exception: Exception | None = None,
-    kind: ProxyView = ProxyView,
+    exception: type[Exception] | None = None,
+    kind: type[ProxyView] | None = None,
     register_url: str = TEST_PROXY_URL,
     register_name: str = TEST_PROXY_NAME,
 ) -> None:
     """Register the test proxy view."""
 
-    class TestProxyView(kind):
+    # mypy doesn't handle variable superclasses correctly:
+    # See: https://github.com/python/mypy/issues/14458
+    class TestProxyView(kind or ProxyView):  # type: ignore[misc]
         """Test ProxyView."""
 
         url = register_url
@@ -155,7 +158,7 @@ async def ws_response_handler(request: web.Request) -> web.WebSocketResponse:
 @pytest.fixture
 async def local_server(
     setup_http: Any, hass: HomeAssistant, aiohttp_server: Any
-) -> str:
+) -> URL:
     """Local test server fixture."""
     app = web.Application()
     app.add_routes(
@@ -164,4 +167,4 @@ async def local_server(
             web.get("/ws", ws_response_handler),
         ]
     )
-    return (await aiohttp_server(app)).make_url("/")
+    return cast(URL, (await aiohttp_server(app)).make_url("/"))
