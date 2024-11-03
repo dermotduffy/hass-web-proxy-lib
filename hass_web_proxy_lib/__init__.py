@@ -100,7 +100,7 @@ class ProxyView(HomeAssistantView):  # type: ignore[misc]
         try:
             return await self._handle_request(request, **kwargs)
         except aiohttp.ClientError as err:
-            LOGGER.debug("Reverse proxy error for %s: %s", request.rel_url, err)
+            LOGGER.warning("Reverse proxy error for %s: %s", request.rel_url, err)
         raise HTTPBadGateway
 
     def _get_proxied_url_or_handle_error(

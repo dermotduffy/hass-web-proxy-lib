@@ -115,52 +115,53 @@ async def register_test_view(  # noqa: PLR0913
     hass.http.register_view(TestProxyView(session))
 
 
+def _get_response_data(
+    request: web.Request, **kwargs: dict[str, Any]
+) -> dict[str, Any]:
+    """Get the response data for a given request."""
+    return {
+        "headers": dict(request.headers),
+        "url": str(request.url),
+        **kwargs,
+    }
+
+
+async def response_handler(request: web.Request) -> web.Response:
+    """Return simple request data."""
+    # Echo the request details back as the data.
+    return web.json_response(
+        status=200,
+        data=_get_response_data(request),
+    )
+
+
+async def ws_response_handler(request: web.Request) -> web.WebSocketResponse:
+    """Return simple request data."""
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    # First send the request data back.
+    await ws.send_json(_get_response_data(request))
+
+    # Then echo back whatever is received.
+    async for msg in ws:
+        if msg.type == aiohttp.WSMsgType.TEXT:
+            await ws.send_str(msg.data)
+        elif msg.type == aiohttp.WSMsgType.BINARY:
+            await ws.send_bytes(msg.data)
+    return ws
+
+
 @pytest.fixture
 async def local_server(
-    request: Any, setup_http: Any, hass: HomeAssistant, aiohttp_server: Any
+    setup_http: Any, hass: HomeAssistant, aiohttp_server: Any
 ) -> str:
     """Local test server fixture."""
-
-    def _get_response_data(
-        request: web.Request, **kwargs: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Get the response data for a given request."""
-        return {
-            "headers": dict(request.headers),
-            "url": str(request.url),
-            **kwargs,
-        }
-
-    async def handler(request: web.Request) -> web.Response:
-        """Return simple request data."""
-        # Echo the request details back as the data.
-        return web.json_response(
-            status=200,
-            data=_get_response_data(request),
-        )
-
-    async def handler_ws(request: web.Request) -> web.WebSocketResponse:
-        """Return simple request data."""
-        ws = web.WebSocketResponse()
-        await ws.prepare(request)
-
-        # First send the request data back.
-        await ws.send_json(_get_response_data(request))
-
-        # Then echo back whatever is received.
-        async for msg in ws:
-            if msg.type == aiohttp.WSMsgType.TEXT:
-                await ws.send_str(msg.data)
-            elif msg.type == aiohttp.WSMsgType.BINARY:
-                await ws.send_bytes(msg.data)
-        return ws
-
     app = web.Application()
     app.add_routes(
         [
-            web.get("/", handler),
-            web.get("/ws", handler_ws),
+            web.get("/", response_handler),
+            web.get("/ws", ws_response_handler),
         ]
     )
-
     return (await aiohttp_server(app)).make_url("/")

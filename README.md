@@ -19,8 +19,7 @@ request, or raising an exception to indicate an error condition.
 ## Example Usage
 
 Proxies a `GET` request from `https://$HA_INSTANCE/api/my_integration/proxy/`
-through to whatever URL is specified in the `url` query string parameter of the
-request.
+through to `/dir/file` relative to the URL stored in the config entry data.
 
 ```py
 @callback
@@ -38,9 +37,15 @@ class MyProxyView(ProxyView):
 
     def _get_proxied_url(self, request: web.Request) -> ProxiedURL:
         """Get the URL to proxy."""
-        if "url" not in request.query:
+        # Retrieve host to connect to from config entry data.
+        # Specifics depend on your application, this is an example only.
+        config_entries = hass.config_entries.async_entries(DOMAIN):
+        if not config_entries:
             raise HASSWebProxyLibNotFoundRequestError
-        return ProxiedURL(url=urllib.parse.unquote(request.query["url"]))
+        url = config_entries[0].data.get(CONF_URL)
+        if not url:
+            raise HASSWebProxyLibNotFoundRequestError
+        return ProxiedURL(url=f"${url}/dir/file")
 ```
 
 See the
@@ -106,44 +111,80 @@ This library also contains a small [test utility and fixture
 file](https://github.com/dermotduffy/hass-web-proxy-lib/blob/main/hass_web_proxy_lib/tests/utils.py)
 that can be used to test proxying.
 
-The `local_server` fixture will start a small `aiohttp` server that can be
-"proxied to". The server listens to `/` and `/ws` for simple `GET` requests
-and websockets respectively.
+### Test Handlers
 
-### `/`
+#### `response_handler(request: web.Request) -> web.Response`
 
-The `/` handler will return a `json` object containing:
+A small response handler that will return a `json` object containing:
 
 | Field name | Description                                   |
 | ---------- | --------------------------------------------- |
 | `headers`  | A dictionary of the request headers received. |
 | `url`      | The full URL/querystring requested.           |
 
-### `/ws`
+#### `ws_response_handler(request: web.Request) -> web.WebSocketResponse`
 
-The `/ws` handler will initially return a `json` object containing `headers` and
-`url` (as in `/` above), and then will simply echo back text or binary data.
+A small websocket response handler that will initially return a `json` object
+containing `headers` and `url` (as in `response_handler` above), and then will
+simply echo back any future text or binary data.
+
+### Test Fixtures
+
+The `local_server` fixture will start a small `aiohttp` server that can be
+"proxied to". The server listens to `/` and `/ws` for simple `GET` requests and
+websockets respectively using the above handlers. The resultant server address
+will be available within the `local_server` variable as a `URL` object.
 
 ### Example Test Usage
 
 ```py
 import pytest
+from hass_web_proxy_lib.tests.utils import response_handler, ws_response_handler
 
 # Add the HA and local_server fixtures.
 pytest_plugins = [
     "pytest_homeassistant_custom_component",
-    "hass_web_proxy_lib.tests.utils",
 ]
+
+# Start a server that listens to requests for /dir/file and /dir/websocket .
+@pytest.fixture
+async def local_backend(hass: HomeAssistant, aiohttp_server: Any) -> Any:
+    """Start a local backend."""
+
+    # Start a local backend.
+    app = web.Application()
+    app.add_routes([
+        web.get("/dir/file", response_handler),
+        web.get("/dir/websocket", ws_response_handler),
+
+    ])
+
+    # Create a config entry for my integration, passing in the local backend
+    # address as config entry data.
+    config_entry: MockConfigEntry = MockConfigEntry(
+        entry_id="74565ad414754616000674c87bdc876c",
+        domain=DOMAIN,
+        data={CONF_URL: str(app.make_url("/"))},
+        title="My entry"
+    )
+    config_entry.add_to_hass(hass)
+
+    # Setup the integration.
+    await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    return await aiohttp_server(app)
+
 
 async def test_proxy_view_success(
     hass: HomeAssistant,
-    local_server: Any,
+    local_backend: Any,
     hass_client: Any,
 ) -> None:
     """Test that a valid URL proxies successfully."""
     authenticated_hass_client = await hass_client()
-    resp = await authenticated_hass_client.get(
-        f"/api/my_integration/proxy/?url={urllib.parse.quote_plus(local_server)}"
-    )
+    # The proxy code above in `_get_proxied_url` should result in a request to
+    # $URL/dir/file which should return an OK HTTP status.
+    resp = await authenticated_hass_client.get(f"/api/my_integration/proxy/")
     assert resp.status == HTTPStatus.OK
 ```
