@@ -36,14 +36,17 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.14"
-homeassistant = ">=2024.10.3"
 
 [tool.poetry.group.dev.dependencies]
+# This library will only ever be used as part of a live HA instance, so the HA
+# library is only necessary for development/testing.
+# See: https://github.com/blakeblackshear/frigate-hass-integration/issues/762#issuecomment-2486337818 .
+homeassistant = ">=2024.10.3"
+mypy = ">=1.13"
+poetry = ">=1.8.4"
 pytest = ">=8.3.3"
 pytest-homeassistant-custom-component = ">=0.13.174"
 ruff = ">=0.7.0"
-poetry = ">=1.8.4"
-mypy = ">=1.13"
 
 [tool.mypy]
 # Stock HomeAssistant mypy configuration.
