@@ -18,7 +18,7 @@ jobs:
     name: Tests
     steps:
       - name: Check out code from GitHub
-        uses: "actions/checkout@v4.2.2"
+        uses: "actions/checkout@v5.0.0"
       - name: Setup Python ${{ env.DEFAULT_PYTHON }}
         uses: "actions/setup-python@v5.4.0"
         with:
@@ -42,7 +42,7 @@ jobs:
     name: Lint
     steps:
       - name: Check out code from GitHub
-        uses: "actions/checkout@v4.2.2"
+        uses: "actions/checkout@v5.0.0"
       - name: Setup Python ${{ env.DEFAULT_PYTHON }}
         uses: "actions/setup-python@v5.4.0"
         with:
@@ -62,7 +62,7 @@ jobs:
     name: Typing
     steps:
       - name: Check out code from GitHub
-        uses: "actions/checkout@v4.2.2"
+        uses: "actions/checkout@v5.0.0"
       - name: Setup Python ${{ env.DEFAULT_PYTHON }}
         uses: "actions/setup-python@v5.4.0"
         with:
