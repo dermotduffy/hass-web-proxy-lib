@@ -190,9 +190,9 @@ class WebsocketProxyView(ProxyView):
                 elif msg.type == aiohttp.WSMsgType.BINARY:
                     await ws_out.send_bytes(msg.data)
                 elif msg.type == aiohttp.WSMsgType.PING:
-                    await ws_out.ping()
+                    await ws_out.ping(msg.data)
                 elif msg.type == aiohttp.WSMsgType.PONG:
-                    await ws_out.pong()
+                    await ws_out.pong(msg.data)
             except ConnectionResetError:
                 return
 
