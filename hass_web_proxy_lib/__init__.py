@@ -13,7 +13,7 @@ import aiohttp
 import aiohttp.typedefs
 from aiohttp import hdrs, web
 from aiohttp.web_exceptions import HTTPBadGateway
-from homeassistant.components.http import KEY_AUTHENTICATED, HomeAssistantView
+from homeassistant.helpers.http import KEY_AUTHENTICATED, HomeAssistantView
 from homeassistant.util.ssl import get_default_context
 from multidict import CIMultiDict
 
