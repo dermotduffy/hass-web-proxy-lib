@@ -1,7 +1,6 @@
 """Test utilities for hass_web_proxy_lib."""
 
-from collections.abc import Generator
-from typing import Any, Self, cast
+from typing import TYPE_CHECKING, Any, Self, cast
 from unittest.mock import patch
 
 import aiohttp
@@ -14,9 +13,13 @@ from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.plugins import (
     enable_custom_integrations,  # noqa: F401  # noqa: F401
 )
-from yarl import URL
 
 from hass_web_proxy_lib import ProxiedURL, ProxyView
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from yarl import URL
 
 TEST_PROXY_URL = "/api/test_proxy"
 TEST_PROXY_NAME = "api:test_proxy"
@@ -167,4 +170,4 @@ async def local_server(
             web.get("/ws", ws_response_handler),
         ]
     )
-    return cast(URL, (await aiohttp_server(app)).make_url("/"))
+    return cast("URL", (await aiohttp_server(app)).make_url("/"))
