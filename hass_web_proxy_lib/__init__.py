@@ -168,8 +168,9 @@ class ProxyView(HomeAssistantView):
 
             except (aiohttp.ClientError, aiohttp.ClientPayloadError) as err:
                 LOGGER.debug("Stream error for %s: %s", request.rel_url, err)
-            except ConnectionResetError:
-                # Connection is reset/closed by peer.
+            except ConnectionResetError, ConnectionError:
+                # ConnectionError covers the "Connection lost" variant raised
+                # from aiohttp's drain helper when the peer disconnects.
                 pass
 
             return response
@@ -220,22 +221,26 @@ class WebsocketProxyView(ProxyView):
 
         source_header = _init_header(request, url_or_response.headers)
 
-        async with self._websession.ws_connect(
-            url_or_response.url,
-            headers=source_header,
-            params=url_or_response.query_params,
-            protocols=req_protocols,
-            autoclose=False,
-            autoping=False,
-            ssl=url_or_response.ssl_context or get_default_context(),
-        ) as ws_to_target:
-            await asyncio.wait(
-                [
-                    asyncio.create_task(self._proxy_msgs(ws_to_target, ws_to_user)),
-                    asyncio.create_task(self._proxy_msgs(ws_to_user, ws_to_target)),
-                ],
-                return_when=asyncio.tasks.FIRST_COMPLETED,
-            )
+        try:
+            LOGGER.debug("Proxying WebSocket to %s", url_or_response.url)
+            async with self._websession.ws_connect(
+                url_or_response.url,
+                headers=source_header,
+                params=url_or_response.query_params,
+                protocols=req_protocols,
+                autoclose=False,
+                autoping=False,
+                ssl=url_or_response.ssl_context or get_default_context(),
+            ) as ws_to_target:
+                await asyncio.wait(
+                    [
+                        asyncio.create_task(self._proxy_msgs(ws_to_target, ws_to_user)),
+                        asyncio.create_task(self._proxy_msgs(ws_to_user, ws_to_target)),
+                    ],
+                    return_when=asyncio.tasks.FIRST_COMPLETED,
+                )
+        except TimeoutError:
+            LOGGER.warning("WebSocket proxy to %s timed out", url_or_response.url)
         return ws_to_user
 
 
