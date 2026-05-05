@@ -35,23 +35,29 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.12,<3.14"
+python = ">=3.14,<4.0"
 
 [tool.poetry.group.dev.dependencies]
 # This library will only ever be used as part of a live HA instance, so the HA
 # library is only necessary for development/testing.
 # See: https://github.com/blakeblackshear/frigate-hass-integration/issues/762#issuecomment-2486337818 .
-homeassistant = ">=2024.10.3"
+homeassistant = ">=2026.1.0"
 mypy = ">=1.13"
 poetry = ">=1.8.4"
 pytest = ">=8.3.3"
-pytest-homeassistant-custom-component = ">=0.13.174"
+pytest-homeassistant-custom-component = ">=0.13.302"
 ruff = ">=0.7.0"
+
+# Force transitive dependencies to higher versions to work with Python >=3.14 .
+# May not be necessary as new versions of real dependencies are released.
+httpcore = ">=1.0.8"
+rapidfuzz = ">=3.14.0"
+mashumaro = ">=3.17"
 
 [tool.mypy]
 # Stock HomeAssistant mypy configuration.
 ignore_missing_imports = true
-python_version = "3.12"
+python_version = "3.14"
 follow_imports = "silent"
 strict_equality = true
 warn_incomplete_stub = true

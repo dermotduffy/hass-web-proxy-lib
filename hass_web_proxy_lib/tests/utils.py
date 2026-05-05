@@ -63,7 +63,7 @@ def hass_web_proxy_fixture(
 class ClientErrorStreamResponse(web.StreamResponse):
     """StreamResponse for testing purposes that raises a ClientError."""
 
-    async def write(self, _data: bytes) -> None:
+    async def write(self, data: bytes | bytearray | memoryview[int]) -> None:
         """Write data."""
         raise aiohttp.ClientError
 
@@ -71,7 +71,7 @@ class ClientErrorStreamResponse(web.StreamResponse):
 class ConnectionResetStreamResponse(web.StreamResponse):
     """StreamResponse for testing purposes that raises a ConnectionResetError."""
 
-    async def write(self, _data: bytes) -> None:
+    async def write(self, data: bytes | bytearray | memoryview[int]) -> None:
         """Write data."""
         raise ConnectionResetError
 
@@ -106,7 +106,7 @@ async def register_test_view(  # noqa: PLR0913
         url = register_url
         name = register_name
 
-        def _get_proxied_url(self, _request: web.Request, **_kwargs: Any) -> ProxiedURL:
+        def _get_proxied_url(self, request: web.Request, **kwargs: Any) -> ProxiedURL:
             """Get the relevant Proxied URL."""
             if exception:
                 raise exception

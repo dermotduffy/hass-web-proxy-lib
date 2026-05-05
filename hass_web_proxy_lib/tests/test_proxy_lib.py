@@ -9,9 +9,9 @@ from unittest.mock import MagicMock, patch
 
 import aiohttp
 import pytest
-from aiohttp import hdrs
+from aiohttp import hdrs, web
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-import hass_web_proxy_lib
 from hass_web_proxy_lib import (
     HASSWebProxyLibBadRequestError,
     HASSWebProxyLibExpiredError,
@@ -188,7 +188,7 @@ async def test_proxy_view_aiohttp_read_error(
     mock_request.side_effect = aiohttp.ClientError
 
     with patch.object(
-        hass.helpers.aiohttp_client.async_get_clientsession(),
+        async_get_clientsession(hass),
         "request",
         new=mock_request,
     ):
@@ -316,7 +316,7 @@ async def test_proxy_view_websocket_connection_reset(
     # Tricky: This test is intended to test a ConnectionResetError to the
     # backend server, which is the _second_ call to send*. The first call (from
     # this test) needs to succeed.
-    real_send_str = hass_web_proxy_lib.aiohttp.web.WebSocketResponse.send_str
+    real_send_str = web.WebSocketResponse.send_str
     called_once = False
 
     async def send_str(*args: Any, **kwargs: Any) -> None:
