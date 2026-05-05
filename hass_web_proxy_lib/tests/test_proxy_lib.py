@@ -336,6 +336,32 @@ async def test_proxy_view_websocket_connection_reset(
             await ws.send_str("data")
 
 
+async def test_proxy_view_websocket_timeout(
+    hass: Any,
+    caplog: Any,
+    local_server: Any,
+    hass_client: Any,
+) -> None:
+    """Test proxy websocket handles a TimeoutError from ws_connect."""
+    await register_test_view(
+        hass, proxied_url=ProxiedURL(url=f"{local_server}ws"), kind=WebsocketProxyView
+    )
+
+    mock_ws_connect = MagicMock(side_effect=TimeoutError)
+
+    authenticated_hass_client = await hass_client()
+
+    with patch.object(
+        async_get_clientsession(hass),
+        "ws_connect",
+        new=mock_ws_connect,
+    ):
+        async with authenticated_hass_client.ws_connect(TEST_PROXY_URL):
+            pass
+
+    assert "timed out" in caplog.text
+
+
 @pytest.mark.usefixtures("local_server")
 async def test_proxy_view_websocket_not_found(
     hass: HomeAssistant,
