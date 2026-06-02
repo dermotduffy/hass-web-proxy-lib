@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: ${{ env.DEFAULT_PYTHON }}
       - name: Set up poetry
-        uses: snok/install-poetry@v1.4.1
+        uses: snok/install-poetry@v1.4.2
       - name: "Set up dependencies"
         run: poetry install --no-interaction
       - name: Tests suite
@@ -48,7 +48,7 @@ jobs:
         with:
           python-version: ${{ env.DEFAULT_PYTHON }}
       - name: Set up poetry
-        uses: snok/install-poetry@v1.4.1
+        uses: snok/install-poetry@v1.4.2
       - name: "Set up dependencies"
         run: poetry install --no-interaction
       - name: "Lint"
@@ -68,7 +68,7 @@ jobs:
         with:
           python-version: ${{ env.DEFAULT_PYTHON }}
       - name: Set up poetry
-        uses: snok/install-poetry@v1.4.1
+        uses: snok/install-poetry@v1.4.2
       - name: "Set up dependencies"
         run: poetry install --no-interaction
       - name: "mypy"
