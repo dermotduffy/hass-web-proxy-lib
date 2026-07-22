@@ -168,7 +168,7 @@ class ProxyView(HomeAssistantView):
 
             except (aiohttp.ClientError, aiohttp.ClientPayloadError) as err:
                 LOGGER.debug("Stream error for %s: %s", request.rel_url, err)
-            except ConnectionResetError, ConnectionError:
+            except (ConnectionResetError, ConnectionError):
                 # ConnectionError covers the "Connection lost" variant raised
                 # from aiohttp's drain helper when the peer disconnects.
                 pass
